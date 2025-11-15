@@ -7,7 +7,7 @@ from pathlib import Path
 src_dir = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_dir))
 
-from bank_sync.main import main
+from bank_sync.main import main  # noqa: E402
 
 if __name__ == "__main__":
     sys.exit(main())
