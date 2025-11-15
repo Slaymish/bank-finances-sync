@@ -25,7 +25,7 @@ class AkahuTransaction:
     source: str
 
     @classmethod
-    def from_payload(cls, payload: Dict, *, source: str) -> "AkahuTransaction":
+    def from_payload(cls, payload: Dict, *, source: str, account_name: str = "unknown") -> "AkahuTransaction":
         """Create an :class:`AkahuTransaction` from an Akahu API payload."""
 
         settled_at = payload.get("date") or payload.get("settled_at")
@@ -33,7 +33,7 @@ class AkahuTransaction:
         return cls(
             id=payload["_id"],
             date=_ensure_iso_date(settled_at),
-            account=payload.get("account", {}).get("name", "unknown"),
+            account=account_name,
             amount=float(payload.get("amount", 0)),
             balance=_safe_float(payload.get("balance")),
             description_raw=payload.get("description", ""),
@@ -92,6 +92,18 @@ class AkahuClient:
         self._app_token = app_token
         self._base_url = base_url.rstrip("/")
         self._session = session or requests.Session()
+        self._account_map: Optional[Dict[str, str]] = None
+
+    def _get_account_map(self) -> Dict[str, str]:
+        """Fetch accounts and return ID -> name mapping."""
+        if self._account_map is None:
+            payload = self._request("GET", "/accounts")
+            self._account_map = {
+                account["_id"]: account.get("name", "unknown")
+                for account in payload.get("items", [])
+            }
+            LOGGER.info("Loaded %d accounts", len(self._account_map))
+        return self._account_map
 
     def fetch_settled_transactions(
         self,
@@ -109,15 +121,16 @@ class AkahuClient:
             "type": "SETTLED",
         }
         cursor: Optional[str] = None
+        account_map = self._get_account_map()
 
         while True:
             payload = self._request("GET", "/transactions", params={**params, "cursor": cursor} if cursor else params)
             items = payload.get("items", [])
-            LOGGER.info("Akahu API returned %d items", len(items))
+            LOGGER.info("Akahu API returned %d items (all settled via type filter)", len(items))
             for transaction in items:
-                if transaction.get("status", "").upper() != "SETTLED":
-                    continue
-                yield AkahuTransaction.from_payload(transaction, source="akahu_bnz")
+                account_id = transaction.get("_account", "")
+                account_name = account_map.get(account_id, "unknown")
+                yield AkahuTransaction.from_payload(transaction, source="akahu_bnz", account_name=account_name)
 
             cursor = payload.get("cursor", {}).get("next")
             if not cursor:

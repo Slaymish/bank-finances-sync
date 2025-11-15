@@ -32,30 +32,37 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Print the planned Google Sheets mutations without applying them",
     )
+    parser.add_argument(
+        "--reset-state",
+        action="store_true",
+        help="Ignore saved sync state and fetch transactions from lookback_days window",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
-    run_sync(dry_run=args.dry_run)
+    run_sync(dry_run=args.dry_run, reset_state=args.reset_state)
 
 
-def run_sync(dry_run: bool = False) -> None:
+def run_sync(dry_run: bool = False, reset_state: bool = False) -> None:
     config_path = Path(os.environ.get("SYNC_CONFIG", "config.json"))
     config = load_config(config_path)
-    credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or config.get("google_service_file")
     if not credentials_path:
-        raise RuntimeError("GOOGLE_APPLICATION_CREDENTIALS environment variable must be set")
+        raise RuntimeError("Either GOOGLE_APPLICATION_CREDENTIALS environment variable or 'google_service_file' in config must be set")
 
     lookback_days = int(config.get("lookback_days", 7))
     end_timestamp = datetime.now(timezone.utc)
 
     state_path = Path(config.get("state_file", "sync_state.json"))
     state = SyncState.load(state_path)
-    if state.last_synced_at:
+    if state.last_synced_at and not reset_state:
         start_timestamp = state.last_synced_at - timedelta(milliseconds=1)
     else:
         start_timestamp = end_timestamp - timedelta(days=lookback_days)
+        if reset_state:
+            LOGGER.info("Resetting sync state, will fetch from %s", start_timestamp)
 
     sheets_client = SheetsClient(
         spreadsheet_id=config["spreadsheet_id"],
@@ -125,27 +132,29 @@ def run_sync(dry_run: bool = False) -> None:
         if new_rows:
             sheets_client.append_transactions(new_rows)
         if updates:
-            for row_index, row in updates:
-                sheets_client.update_transaction(row_index, row)
+            sheets_client.batch_update_transactions(updates)
         if rows_to_delete:
             sheets_client.delete_rows(rows_to_delete)
 
-    if config.get("perform_reconciliation", False):
-        results = reconcile([txn.data for txn in existing])
-        for result in results:
-            if result.is_ok:
-                LOGGER.info("Reconciled %s", result.account)
-            else:
-                LOGGER.warning(
-                    "Reconciliation drift for %s: expected %.2f vs sheet %.2f (diff %.2f)",
-                    result.account,
-                    result.expected_balance,
-                    result.sheet_balance,
-                    result.difference,
-                )
+        # Re-fetch transactions after updates for accurate reconciliation
+        if config.get("perform_reconciliation", False):
+            updated_transactions = sheets_client.fetch_transactions()
+            results = reconcile([txn.data for txn in updated_transactions])
+            for result in results:
+                if result.is_ok:
+                    LOGGER.info("Reconciled %s: %.2f", result.account, result.expected_balance)
+                else:
+                    LOGGER.warning(
+                        "Reconciliation drift for %s: expected %.2f vs sheet %.2f (diff %.2f)",
+                        result.account,
+                        result.expected_balance,
+                        result.sheet_balance,
+                        result.difference,
+                    )
 
     if not dry_run:
-        state.last_synced_at = max(state.last_synced_at or start_timestamp, end_timestamp)
+        # Update sync state to current time so next run fetches only newer transactions
+        state.last_synced_at = end_timestamp
         state.save(state_path)
 
 

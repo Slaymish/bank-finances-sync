@@ -15,7 +15,7 @@ class ReconciliationResult:
 
     @property
     def is_ok(self) -> bool:
-        return abs(self.difference) < 0.01
+        return abs(self.difference) < 0.10  # 10 cent tolerance for rounding/timing differences
 
 
 def reconcile(transactions: Iterable[dict]) -> List[ReconciliationResult]:

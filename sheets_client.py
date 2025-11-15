@@ -89,6 +89,28 @@ class SheetsClient:
             body={"values": [row]},
         ).execute()
 
+    def batch_update_transactions(self, updates: List[tuple[int, List[str]]]) -> None:
+        """Update multiple rows in a single batch request."""
+        if not updates:
+            return
+        
+        data = [
+            {
+                "range": f"{self._transactions_tab}!A{row_index}:K{row_index}",
+                "values": [row]
+            }
+            for row_index, row in updates
+        ]
+        
+        LOGGER.info("Batch updating %d rows", len(updates))
+        self._service.spreadsheets().values().batchUpdate(
+            spreadsheetId=self._spreadsheet_id,
+            body={
+                "valueInputOption": "USER_ENTERED",
+                "data": data
+            }
+        ).execute()
+
     def delete_rows(self, row_indices: List[int]) -> None:
         if not row_indices:
             return

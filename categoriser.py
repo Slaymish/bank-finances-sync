@@ -49,5 +49,5 @@ class Categoriser:
     def detect_transfer(transaction: dict) -> bool:
         description = (transaction.get("description_raw") or "").lower()
         merchant = (transaction.get("merchant_normalised") or "").lower()
-        hints = ["transfer", "internal", "self", "bnz"]
+        hints = ["internet xfr", "transfer", "internal", "self", "bnz"]
         return any(hint in description or hint in merchant for hint in hints)

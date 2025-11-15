@@ -13,5 +13,6 @@
       "field": "description_raw",
       "max_amount": 1
     }
-  ]
+  ],
+  "google_service_file": "path_to_json"
 }

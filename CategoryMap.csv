@@ -1,0 +1,37 @@
+pattern,field,category,priority
+New World,merchant_normalised,Food: Groceries,10
+Night 'n Day,merchant_normalised,Food: Convenience,10
+Willis Superette,merchant_normalised,Food: Convenience,10
+Countdown,merchant_normalised,Food: Groceries,10
+Subway,merchant_normalised,Food: Takeaway,15
+TJ Katsu,merchant_normalised,Food: Takeaway,15
+Hey Sushi,merchant_normalised,Food: Takeaway,15
+Chopsticks,merchant_normalised,Food: Takeaway,15
+Zelati,merchant_normalised,Food: Dessert,15
+Mother Of Coffee,merchant_normalised,Food: Coffee,15
+Mojo Coffee,merchant_normalised,Food: Coffee,15
+Raglan Roast,merchant_normalised,Food: Coffee,15
+Eva's Garage,merchant_normalised,Food: Coffee,15
+Tank Juice,merchant_normalised,Food: Drinks,15
+Bay Foodmarket,merchant_normalised,Food: Groceries,10
+Parade Dairy,merchant_normalised,Food: Convenience,10
+Hy - Grade Dairy,merchant_normalised,Food: Convenience,10
+Sharesies,merchant_normalised,Investments,5
+STUDYLINK,description_raw,Income: Student Allowance,5
+VICTORIA UNIVERSI,description_raw,Income: Salary,5
+Snapper,merchant_normalised,Transport: Public,10
+Z Energy,merchant_normalised,Transport: Fuel,10
+rent,description_raw,Housing: Rent,5
+Twisted dinner,description_raw,Food: Dining Out,15
+AFTERPAY,description_raw,Shopping: Afterpay,20
+Afterpay,merchant_normalised,Shopping: Afterpay,20
+Backblaze,merchant_normalised,Services: Cloud Storage,10
+Amazon Web Services,merchant_normalised,Services: AWS,10
+YNAB,description_raw,Services: Software,10
+Faultline,merchant_normalised,Recreation: Gym,10
+Ferret Bookshop,merchant_normalised,Shopping: Books,15
+Pegasus Books,merchant_normalised,Shopping: Books,15
+Daiso,merchant_normalised,Shopping: Household,15
+Laundry,description_raw,Household: Laundry,10
+Bargain Chemist,merchant_normalised,Health: Pharmacy,10
+BURKE BA & WE,description_raw,Income: Family,5
