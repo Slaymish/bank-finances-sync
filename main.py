@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List
 
@@ -12,6 +12,7 @@ from akahu_client import AkahuClient, AkahuTransaction
 from categoriser import Categoriser
 from reconciliation import reconcile
 from sheets_client import SheetsClient, TRANSACTION_HEADERS
+from state_manager import SyncState
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 LOGGER = logging.getLogger(__name__)
@@ -30,8 +31,14 @@ def main() -> None:
         raise RuntimeError("GOOGLE_APPLICATION_CREDENTIALS environment variable must be set")
 
     lookback_days = int(config.get("lookback_days", 7))
-    end_date = datetime.utcnow().date()
-    start_date = end_date - timedelta(days=lookback_days)
+    end_timestamp = datetime.now(timezone.utc)
+
+    state_path = Path(config.get("state_file", "sync_state.json"))
+    state = SyncState.load(state_path)
+    if state.last_synced_at:
+        start_timestamp = state.last_synced_at - timedelta(milliseconds=1)
+    else:
+        start_timestamp = end_timestamp - timedelta(days=lookback_days)
 
     sheets_client = SheetsClient(
         spreadsheet_id=config["spreadsheet_id"],
@@ -51,12 +58,12 @@ def main() -> None:
         app_token=config["akahu_app_token"],
     )
 
-    LOGGER.info("Fetching Akahu transactions between %s and %s", start_date, end_date)
+    LOGGER.info("Fetching Akahu transactions between %s and %s", start_timestamp, end_timestamp)
     fetched_transactions: List[AkahuTransaction] = list(
-        akahu_client.fetch_settled_transactions(start_date=start_date, end_date=end_date)
+        akahu_client.fetch_settled_transactions(start_datetime=start_timestamp, end_datetime=end_timestamp)
     )
 
-    imported_at = datetime.utcnow()
+    imported_at = datetime.now(timezone.utc)
     new_rows: List[List[str]] = []
     updates: List[tuple[int, List[str]]] = []
     seen_ids = set()
@@ -108,6 +115,9 @@ def main() -> None:
                     result.sheet_balance,
                     result.difference,
                 )
+
+    state.last_synced_at = max(state.last_synced_at or start_timestamp, end_timestamp)
+    state.save(state_path)
 
 
 def _needs_update(existing: Dict[str, str], new_row: List[str]) -> bool:
