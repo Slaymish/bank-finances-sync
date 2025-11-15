@@ -2,7 +2,7 @@ from typing import Any, Dict, List
 
 import pytest
 
-import sheets_client as sc
+import bank_sync.sheets_client as sc
 
 
 class FakeRequest:

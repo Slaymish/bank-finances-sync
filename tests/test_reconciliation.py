@@ -1,6 +1,6 @@
 import pytest
 
-from reconciliation import ReconciliationResult, _latest_balance, reconcile
+from bank_sync.reconciliation import ReconciliationResult, _latest_balance, reconcile
 
 
 def test_reconcile_groups_by_account():

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from state_manager import SyncState
+from bank_sync.state_manager import SyncState
 
 
 def test_sync_state_loads_from_missing_file(tmp_path):

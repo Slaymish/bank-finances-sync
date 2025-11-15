@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass, field as dataclass_field
 from typing import Iterable, List, Mapping, Optional, Pattern, Sequence
 
-from akahu_client import AkahuTransaction
+from bank_sync.akahu_client import AkahuTransaction
 
 
 @dataclass

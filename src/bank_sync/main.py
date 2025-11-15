@@ -9,15 +9,18 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence
 
-from akahu_client import AkahuClient, AkahuTransaction
-from categoriser import Categoriser
-from reconciliation import reconcile
-from sheets_client import SheetsClient, TRANSACTION_HEADERS
-from state_manager import SyncState
-from ignore_rules import build_ignore_rules, should_ignore
+from bank_sync.akahu_client import AkahuClient, AkahuTransaction
+from bank_sync.categoriser import Categoriser
+from bank_sync.reconciliation import reconcile
+from bank_sync.sheets_client import SheetsClient, TRANSACTION_HEADERS
+from bank_sync.state_manager import SyncState
+from bank_sync.ignore_rules import build_ignore_rules, should_ignore
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 LOGGER = logging.getLogger(__name__)
+
+# Get project root (2 levels up from this file: src/bank_sync/main.py -> root)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def load_config(path: str | Path) -> Dict:
@@ -29,7 +32,8 @@ def upload_categories(csv_path: str) -> None:
     """Upload category rules from a local CSV file to the CategoryMap sheet tab."""
     import csv
     
-    config_path = Path(os.environ.get("SYNC_CONFIG", "config.json"))
+    config_env = os.environ.get("SYNC_CONFIG")
+    config_path = Path(config_env) if config_env else PROJECT_ROOT / "config" / "config.json"
     config = load_config(config_path)
     credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or config.get("google_service_file")
     if not credentials_path:
@@ -90,7 +94,8 @@ def main(argv: Sequence[str] | None = None) -> None:
 
 
 def run_sync(dry_run: bool = False, reset_state: bool = False) -> None:
-    config_path = Path(os.environ.get("SYNC_CONFIG", "config.json"))
+    config_env = os.environ.get("SYNC_CONFIG")
+    config_path = Path(config_env) if config_env else PROJECT_ROOT / "config" / "config.json"
     config = load_config(config_path)
     credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or config.get("google_service_file")
     if not credentials_path:
@@ -99,7 +104,7 @@ def run_sync(dry_run: bool = False, reset_state: bool = False) -> None:
     lookback_days = int(config.get("lookback_days", 7))
     end_timestamp = datetime.now(timezone.utc)
 
-    state_path = Path(config.get("state_file", "sync_state.json"))
+    state_path = Path(config.get("state_file", PROJECT_ROOT / "data" / "sync_state.json"))
     state = SyncState.load(state_path)
     if state.last_synced_at and not reset_state:
         start_timestamp = state.last_synced_at - timedelta(milliseconds=1)

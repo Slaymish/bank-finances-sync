@@ -87,13 +87,19 @@ pip install -r requirements.txt
 
 ### 4. Configure the script
 
-Create `config.json`:
+Copy the example config and edit it:
+
+```bash
+cp config/config.json.example config/config.json
+```
+
+Edit `config/config.json`:
 
 ```json
 {
   "akahu_user_token": "user_token_...",
   "akahu_app_token": "app_token_...",
-  "google_service_file": "/path/to/service-account.json",
+  "google_service_file": "service-account.json",
   "spreadsheet_id": "your_spreadsheet_id",
   "lookback_days": 14,
   "perform_reconciliation": true,
@@ -107,6 +113,8 @@ Create `config.json`:
 }
 ```
 
+Place your Google service account JSON file in the project root.
+
 ### 5. Create your Sheet tabs
 
 Create tabs named `Transactions` and `CategoryMap` with the column headers shown above.
@@ -115,44 +123,52 @@ Create tabs named `Transactions` and `CategoryMap` with the column headers shown
 
 **Manual run:**
 ```bash
-python main.py
+python run.py
 ```
 
 **Dry run (preview changes):**
 ```bash
-python main.py --dry-run
+python run.py --dry-run
 ```
 
 **Reset sync state (re-fetch all transactions):**
 ```bash
-python main.py --reset-state
+python run.py --reset-state
 ```
 
 **Upload category rules from CSV:**
 ```bash
-python main.py --upload-categories CategoryMap.csv
+python run.py --upload-categories data/CategoryMap.csv
 ```
 
 **Scheduled sync (cron):**
 ```bash
 # Run every hour
-0 * * * * cd /home/pi/bank-finances-sync && /home/pi/bank-finances-sync/venv/bin/python main.py >> sync.log 2>&1
+0 * * * * cd /home/pi/bank-finances-sync && /home/pi/bank-finances-sync/venv/bin/python run.py >> sync.log 2>&1
 ```
 
 ## Project structure
 
 ```
 .
-├── main.py                 # Main orchestration script
-├── akahu_client.py         # Akahu API wrapper
-├── sheets_client.py        # Google Sheets operations
-├── categoriser.py          # Rule-based categorization
-├── reconciliation.py       # Balance verification
-├── state_manager.py        # Sync state persistence
-├── ignore_rules.py         # Transaction filtering
-├── config.json             # Your credentials (gitignored)
-├── sync_state.json         # Last sync timestamp (auto-generated)
-└── tests/                  # Unit tests
+├── run.py                      # Entry point script
+├── src/
+│   └── bank_sync/              # Main package
+│       ├── __init__.py
+│       ├── main.py             # Orchestration logic
+│       ├── akahu_client.py     # Akahu API wrapper
+│       ├── sheets_client.py    # Google Sheets operations
+│       ├── categoriser.py      # Rule-based categorization
+│       ├── reconciliation.py   # Balance verification
+│       ├── state_manager.py    # Sync state persistence
+│       └── ignore_rules.py     # Transaction filtering
+├── config/
+│   ├── config.json.example     # Example configuration
+│   └── config.json             # Your credentials (gitignored)
+├── data/
+│   ├── sync_state.json         # Last sync timestamp (auto-generated)
+│   └── CategoryMap.csv         # Category rules for upload
+└── tests/                      # Unit tests
 ```
 
 ## How deduplication works

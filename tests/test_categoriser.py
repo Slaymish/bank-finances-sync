@@ -1,4 +1,4 @@
-from categoriser import Categoriser
+from bank_sync.categoriser import Categoriser
 
 
 def test_categoriser_applies_highest_priority_match():

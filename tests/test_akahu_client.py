@@ -3,7 +3,7 @@ from typing import Dict, List
 
 import pytest
 
-from akahu_client import AkahuClient, AkahuTransaction, _ensure_iso_date, _safe_float
+from bank_sync.akahu_client import AkahuClient, AkahuTransaction, _ensure_iso_date, _safe_float
 
 
 class FakeResponse:

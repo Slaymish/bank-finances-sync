@@ -14,5 +14,6 @@
       "max_amount": 1
     }
   ],
-  "google_service_file": "path_to_json"
+  "google_service_file": "bank-sync-service-account.json",
+  "state_file": "data/sync_state.json"
 }

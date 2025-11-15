@@ -1,5 +1,5 @@
-from akahu_client import AkahuTransaction
-from ignore_rules import build_ignore_rules, should_ignore
+from bank_sync.akahu_client import AkahuTransaction
+from bank_sync.ignore_rules import build_ignore_rules, should_ignore
 
 
 def _txn(**overrides):

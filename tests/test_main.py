@@ -1,5 +1,5 @@
-from main import _format_mutation_summary, _needs_update, load_config
-from sheets_client import TRANSACTION_HEADERS
+from bank_sync.main import _format_mutation_summary, _needs_update, load_config
+from bank_sync.sheets_client import TRANSACTION_HEADERS
 
 
 def test_load_config_reads_file(tmp_path):
