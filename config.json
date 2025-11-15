@@ -1,0 +1,10 @@
+{
+  "akahu_user_token": "user_token_here",
+  "akahu_app_token": "app_token_here",
+  "spreadsheet_id": "your_sheet_id_here",
+  "source": "akahu_bnz",
+  "lookback_days": 14,
+  "transactions_tab": "Transactions",
+  "category_map_tab": "CategoryMap",
+  "perform_reconciliation": true
+}
