@@ -1,9 +1,26 @@
 """Utilities for categorising transactions based on spreadsheet rules."""
 from __future__ import annotations
 
+import operator
 import re
-from dataclasses import dataclass
-from typing import Iterable, List
+from dataclasses import dataclass, field
+from typing import Iterable, List, Optional
+
+
+@dataclass(frozen=True)
+class AmountCondition:
+    """Represents a numeric comparison constraint for a rule."""
+
+    operator_symbol: str
+    threshold: float
+
+    def matches(self, amount: Optional[float]) -> bool:
+        if amount is None:
+            return False
+        comparator = _COMPARATORS.get(self.operator_symbol)
+        if not comparator:
+            return False
+        return comparator(amount, self.threshold)
 
 
 @dataclass(order=True)
@@ -12,10 +29,17 @@ class CategoryRule:
     pattern: str
     field: str
     category: str
+    amount_condition: AmountCondition | None = field(default=None, compare=False)
 
     def matches(self, transaction: dict) -> bool:
         target = transaction.get(self.field, "") or ""
-        return bool(re.search(self.pattern, target, flags=re.IGNORECASE))
+        if not re.search(self.pattern, target, flags=re.IGNORECASE):
+            return False
+        if self.amount_condition:
+            amount_value = _coerce_amount(transaction.get("amount"))
+            if not self.amount_condition.matches(amount_value):
+                return False
+        return True
 
 
 class Categoriser:
@@ -35,6 +59,7 @@ class Categoriser:
                     pattern=pattern,
                     field=rule.get("field", "merchant_normalised"),
                     category=rule.get("category", "Uncategorised"),
+                    amount_condition=_parse_amount_condition(rule.get("amount_condition", "")),
                 )
             )
         self._rules.sort()
@@ -51,3 +76,64 @@ class Categoriser:
         merchant = (transaction.get("merchant_normalised") or "").lower()
         hints = ["transfer", "internal", "self", "bnz"]
         return any(hint in description or hint in merchant for hint in hints)
+
+
+_COMPARATORS = {
+    ">": operator.gt,
+    ">=": operator.ge,
+    "<": operator.lt,
+    "<=": operator.le,
+    "=": operator.eq,
+}
+
+
+def _coerce_amount(value: object) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value).replace(",", ""))
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_amount_condition(raw_value: object) -> AmountCondition | None:
+    if not raw_value:
+        return None
+    text = str(raw_value).strip()
+    if not text:
+        return None
+    normalized = text.lower()
+    replacements = [
+        ("greater than or equal to", ">="),
+        ("greater than", ">"),
+        ("more than", ">"),
+        ("less than or equal to", "<="),
+        ("less than", "<"),
+        ("fewer than", "<"),
+        ("at least", ">="),
+        ("at most", "<="),
+        ("no more than", "<="),
+        ("no less than", ">="),
+        ("equal to", "="),
+    ]
+    for phrase, symbol in replacements:
+        normalized = normalized.replace(phrase, symbol)
+    normalized = normalized.replace("dollars", "").replace("dollar", "")
+    normalized = normalized.replace("nz$", "$")
+    normalized = normalized.replace("nzd", "")
+    normalized = normalized.replace(" ", "")
+    match = re.search(r"(>=|<=|>|<|==|=)\$?(-?\d+(?:\.\d+)?)", normalized)
+    if not match:
+        return None
+    operator_symbol = match.group(1)
+    if operator_symbol == "==":
+        operator_symbol = "="
+    if operator_symbol not in _COMPARATORS:
+        return None
+    try:
+        threshold = float(match.group(2))
+    except ValueError:
+        return None
+    return AmountCondition(operator_symbol=operator_symbol, threshold=threshold)
