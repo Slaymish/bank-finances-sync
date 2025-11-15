@@ -18,13 +18,15 @@ class AmountCondition:
     def matches(self, amount: Optional[float]) -> bool:
         if amount is None:
             return False
+        # Use absolute value so rules don't need to deal with negatives
+        abs_amount = abs(amount)
         if self.accepted_values:
-            return any(amount == value for value in self.accepted_values)
+            return any(abs_amount == abs(value) for value in self.accepted_values)
         if self.operator_symbol and self.threshold is not None:
             comparator = _COMPARATORS.get(self.operator_symbol)
             if not comparator:
                 return False
-            return comparator(amount, self.threshold)
+            return comparator(abs_amount, abs(self.threshold))
         return False
 
 

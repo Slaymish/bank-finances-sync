@@ -25,6 +25,41 @@ def load_config(path: str | Path) -> Dict:
         return json.load(config_file)
 
 
+def upload_categories(csv_path: str) -> None:
+    """Upload category rules from a local CSV file to the CategoryMap sheet tab."""
+    import csv
+    
+    config_path = Path(os.environ.get("SYNC_CONFIG", "config.json"))
+    config = load_config(config_path)
+    credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or config.get("google_service_file")
+    if not credentials_path:
+        raise RuntimeError("Either GOOGLE_APPLICATION_CREDENTIALS environment variable or 'google_service_file' in config must be set")
+    
+    csv_file = Path(csv_path)
+    if not csv_file.exists():
+        raise FileNotFoundError(f"CSV file not found: {csv_path}")
+    
+    # Read CSV file
+    with open(csv_file, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        rows = list(reader)
+    
+    if not rows:
+        raise ValueError("CSV file is empty")
+    
+    LOGGER.info("Read %d rows from %s (including header)", len(rows), csv_path)
+    
+    sheets_client = SheetsClient(
+        spreadsheet_id=config["spreadsheet_id"],
+        credentials_path=credentials_path,
+        transactions_tab=config.get("transactions_tab", "Transactions"),
+        category_map_tab=config.get("category_map_tab", "CategoryMap"),
+    )
+    
+    sheets_client.upload_category_rules(rows)
+    LOGGER.info("Successfully uploaded %d category rules to CategoryMap sheet", len(rows) - 1)
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -37,12 +72,21 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Ignore saved sync state and fetch transactions from lookback_days window",
     )
+    parser.add_argument(
+        "--upload-categories",
+        type=str,
+        metavar="CSV_FILE",
+        help="Upload category rules from a local CSV file to the CategoryMap sheet tab",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
-    run_sync(dry_run=args.dry_run, reset_state=args.reset_state)
+    if args.upload_categories:
+        upload_categories(args.upload_categories)
+    else:
+        run_sync(dry_run=args.dry_run, reset_state=args.reset_state)
 
 
 def run_sync(dry_run: bool = False, reset_state: bool = False) -> None:

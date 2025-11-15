@@ -52,6 +52,21 @@ class SheetsClient:
             credentials_path, scopes=["https://www.googleapis.com/auth/spreadsheets"]
         )
         self._service = build("sheets", "v4", credentials=credentials, cache_discovery=False)
+        self._sheet_id_cache: dict[str, int] = {}
+
+    def _get_sheet_id(self, sheet_name: str) -> int:
+        """Get the sheetId for a given sheet name."""
+        if sheet_name in self._sheet_id_cache:
+            return self._sheet_id_cache[sheet_name]
+        
+        metadata = self._service.spreadsheets().get(spreadsheetId=self._spreadsheet_id).execute()
+        for sheet in metadata.get("sheets", []):
+            properties = sheet.get("properties", {})
+            title = properties.get("title", "")
+            sheet_id = properties.get("sheetId", 0)
+            self._sheet_id_cache[title] = sheet_id
+        
+        return self._sheet_id_cache.get(sheet_name, 0)
 
     def fetch_transactions(self) -> List[SheetTransaction]:
         range_name = f"{self._transactions_tab}!A2:K"
@@ -114,11 +129,12 @@ class SheetsClient:
     def delete_rows(self, row_indices: List[int]) -> None:
         if not row_indices:
             return
+        sheet_id = self._get_sheet_id(self._transactions_tab)
         requests = [
             {
                 "deleteDimension": {
                     "range": {
-                        "sheetId": 0,
+                        "sheetId": sheet_id,
                         "dimension": "ROWS",
                         "startIndex": index - 1,
                         "endIndex": index,
@@ -154,3 +170,27 @@ class SheetsClient:
                 }
             )
         return rules
+
+    def upload_category_rules(self, rows: List[List[str]]) -> None:
+        """Clear the CategoryMap sheet and upload new rules from CSV rows."""
+        if not rows:
+            raise ValueError("No rows to upload")
+        
+        # Clear existing content (keep header row)
+        range_name = f"{self._category_tab}!A2:E"
+        self._service.spreadsheets().values().clear(
+            spreadsheetId=self._spreadsheet_id,
+            range=range_name
+        ).execute()
+        LOGGER.info("Cleared existing category rules")
+        
+        # Upload new data (including header if first row)
+        range_name = f"{self._category_tab}!A1:E"
+        body = {"values": rows}
+        self._service.spreadsheets().values().update(
+            spreadsheetId=self._spreadsheet_id,
+            range=range_name,
+            valueInputOption="USER_ENTERED",
+            body=body,
+        ).execute()
+        LOGGER.info("Uploaded %d rows to CategoryMap", len(rows))
