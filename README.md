@@ -29,6 +29,8 @@ The Pi script:
 5. (Optional) Reconciles balances.
 6. Leaves all monthly calculations to your existing Sheet formulas.
 
+To avoid repeatedly re-scanning the same date range, the script now stores a `last_synced_at` timestamp locally (default `sync_state.json`). Each new run fetches only transactions newer than that mark (with a 1 ms overlap to respect Akahu’s exclusive `start` parameter) and updates the timestamp once the sync succeeds. On a brand new install the script falls back to the configurable `lookback_days` window.
+
 ---
 
 ## Why only settled transactions?

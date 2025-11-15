@@ -96,15 +96,15 @@ class AkahuClient:
     def fetch_settled_transactions(
         self,
         *,
-        start_date: date,
-        end_date: date,
+        start_datetime: datetime,
+        end_datetime: datetime,
         page_size: int = 250,
     ) -> Iterable[AkahuTransaction]:
         """Yield all settled transactions within the given dates."""
 
         params = {
-            "start": start_date.isoformat(),
-            "end": end_date.isoformat(),
+            "start": start_datetime.isoformat(),
+            "end": end_datetime.isoformat(),
             "limit": page_size,
             "type": "SETTLED",
         }
