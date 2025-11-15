@@ -242,32 +242,53 @@ Installation
 
 1. Install Python dependencies
 
+```bash
 pip install -r requirements.txt
-
-Suggested requirements.txt:
-
-google-api-python-client
-google-auth
-google-auth-httplib2
-google-auth-oauthlib
-requests
-python-dateutil
-pytz
+```
 
 2. Create Google service account
-	•	Enable Google Sheets API
-	•	Create service account keys
-	•	Share your spreadsheet with the service email
+        •       Enable Google Sheets API
+        •       Create service account keys
+        •       Share your spreadsheet with the service email
 
 3. Store Akahu tokens in a secure file
 
-Example config.json:
+### Configuration
 
+Create a `config.json` based on the template that ships with the repository:
+
+```json
 {
   "akahu_user_token": "user_token_here",
   "akahu_app_token": "app_token_here",
-  "spreadsheet_id": "your_sheet_id_here"
+  "spreadsheet_id": "your_sheet_id_here",
+  "source": "akahu_bnz",
+  "lookback_days": 14,
+  "transactions_tab": "Transactions",
+  "category_map_tab": "CategoryMap",
+  "perform_reconciliation": true
 }
+```
+
+Export the `GOOGLE_APPLICATION_CREDENTIALS` environment variable so the script can load the service-account JSON file:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+```
+
+### Project layout
+
+```
+project-root/
+├── akahu_client.py        # REST wrapper around Akahu
+├── categoriser.py         # Applies CategoryMap rules
+├── reconciliation.py      # Balance reconciliation helpers
+├── sheets_client.py       # Google Sheets utilities
+├── main.py                # End-to-end sync orchestrator
+├── config.json            # Local configuration template
+└── requirements.txt
+```
+
 
 
 ⸻
@@ -276,11 +297,15 @@ Running
 
 Manual:
 
+```bash
 python3 main.py
+```
 
 Cron job (hourly):
 
+```
 0 * * * * /usr/bin/python3 /home/pi/project/main.py >> /home/pi/log.txt 2>&1
+```
 
 
 ⸻
