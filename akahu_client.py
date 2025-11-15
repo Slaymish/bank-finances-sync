@@ -112,7 +112,9 @@ class AkahuClient:
 
         while True:
             payload = self._request("GET", "/transactions", params={**params, "cursor": cursor} if cursor else params)
-            for transaction in payload.get("items", []):
+            items = payload.get("items", [])
+            LOGGER.info("Akahu API returned %d items", len(items))
+            for transaction in items:
                 if transaction.get("status", "").upper() != "SETTLED":
                     continue
                 yield AkahuTransaction.from_payload(transaction, source="akahu_bnz")

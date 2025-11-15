@@ -1,7 +1,7 @@
 {
-  "akahu_user_token": "user_token_here",
-  "akahu_app_token": "app_token_here",
-  "spreadsheet_id": "your_sheet_id_here",
+  "akahu_user_token": "user_token",
+  "akahu_app_token": "app_token",
+  "spreadsheet_id": "id",
   "source": "akahu_bnz",
   "lookback_days": 14,
   "transactions_tab": "Transactions",

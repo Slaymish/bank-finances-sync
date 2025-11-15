@@ -80,6 +80,7 @@ def run_sync(dry_run: bool = False) -> None:
     fetched_transactions: List[AkahuTransaction] = list(
         akahu_client.fetch_settled_transactions(start_datetime=start_timestamp, end_datetime=end_timestamp)
     )
+    LOGGER.info("Fetched %d transactions from Akahu", len(fetched_transactions))
 
     imported_at = datetime.now(timezone.utc)
     new_rows: List[List[str]] = []
@@ -114,6 +115,8 @@ def run_sync(dry_run: bool = False) -> None:
             updates.append((sheet_txn.row_index, row))
 
     rows_to_delete = [txn.row_index for txn in existing if txn.id and txn.id not in seen_ids]
+
+    LOGGER.info("Processing complete: %d new, %d updates, %d deletions", len(new_rows), len(updates), len(rows_to_delete))
 
     if dry_run:
         for line in _format_mutation_summary(new_rows, updates, rows_to_delete):
