@@ -123,8 +123,8 @@ def test_append_update_and_delete(patch_build):
     client.update_transaction(5, row)
     client.delete_rows([5, 3])
 
-    assert patch_build.append_calls[0][0] == "Transactions!A:K"
-    assert patch_build.update_calls[0][0] == "Transactions!A5:K5"
+    assert patch_build.append_calls[0][0] == "Transactions!A:L"
+    assert patch_build.update_calls[0][0] == "Transactions!A5:L5"
     assert patch_build.batch_update_calls
     delete_body = patch_build.batch_update_calls[0]["requests"]
     indices = [req["deleteDimension"]["range"]["startIndex"] for req in delete_body]
