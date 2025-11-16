@@ -36,6 +36,7 @@ class CategoryRule:
     pattern: str
     field: str
     category: str
+    category_type: str = field(default="", compare=False)
     amount_condition: AmountCondition | None = field(default=None, compare=False)
 
     def matches(self, transaction: dict) -> bool:
@@ -66,16 +67,18 @@ class Categoriser:
                     pattern=pattern,
                     field=rule.get("field", "merchant_normalised"),
                     category=rule.get("category", "Uncategorised"),
+                    category_type=rule.get("category_type", ""),
                     amount_condition=_parse_amount_condition(rule.get("amount_condition", "")),
                 )
             )
         self._rules.sort()
 
-    def categorise(self, transaction: dict) -> str:
+    def categorise(self, transaction: dict) -> tuple[str, str]:
+        """Return (category, category_type) for the transaction."""
         for rule in self._rules:
             if rule.matches(transaction):
-                return rule.category
-        return "Uncategorised"
+                return (rule.category, rule.category_type)
+        return ("Uncategorised", "")
 
     @staticmethod
     def detect_transfer(transaction: dict) -> bool:

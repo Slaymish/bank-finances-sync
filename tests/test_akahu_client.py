@@ -54,11 +54,12 @@ def test_transaction_from_payload(transaction_payload):
 
 def test_transaction_to_row_formats_numbers(transaction_payload):
     txn = AkahuTransaction.from_payload(transaction_payload, source="akahu_bnz", account_name="Cheque")
-    row = txn.to_row(category="Groceries", is_transfer=False, imported_at=dt.datetime(2023, 9, 2, 10, 0))
+    row = txn.to_row(category="Groceries", category_type="E", is_transfer=False, imported_at=dt.datetime(2023, 9, 2, 10, 0))
     assert row[:4] == ["txn_123", "2023-09-02", "Cheque", "-12.34"]
     assert row[4] == "120.55"
     assert row[7] == "Groceries"
-    assert row[8] == "FALSE"
+    assert row[8] == "E"
+    assert row[9] == "FALSE"
 
 
 def test_fetch_settled_transactions_paginates(transaction_payload):

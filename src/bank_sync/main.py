@@ -158,9 +158,9 @@ def run_sync(dry_run: bool = False, reset_state: bool = False) -> None:
             "merchant_normalised": transaction.merchant_normalised,
             "source": transaction.source,
         }
-        category = categoriser.categorise(transaction_dict)
+        category, category_type = categoriser.categorise(transaction_dict)
         is_transfer = categoriser.detect_transfer(transaction_dict)
-        row = transaction.to_row(category=category, is_transfer=is_transfer, imported_at=imported_at)
+        row = transaction.to_row(category=category, category_type=category_type, is_transfer=is_transfer, imported_at=imported_at)
 
         if transaction.id not in existing_map:
             new_rows.append(row)

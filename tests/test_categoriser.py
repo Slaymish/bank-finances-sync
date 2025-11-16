@@ -8,7 +8,8 @@ def test_categoriser_applies_highest_priority_match():
     ]
     categoriser = Categoriser(rules)
     txn = {"merchant_normalised": "Countdown Ponsonby"}
-    assert categoriser.categorise(txn) == "Groceries"
+    category, category_type = categoriser.categorise(txn)
+    assert category == "Groceries"
 
 
 def test_categoriser_skips_empty_patterns():
@@ -17,7 +18,8 @@ def test_categoriser_skips_empty_patterns():
         {"pattern": "ferry", "category": "Transport"},
     ]
     categoriser = Categoriser(rules)
-    assert categoriser.categorise({"merchant_normalised": "Ferry ride"}) == "Transport"
+    category, category_type = categoriser.categorise({"merchant_normalised": "Ferry ride"})
+    assert category == "Transport"
 
 
 def test_categoriser_honours_amount_conditions():
@@ -36,14 +38,10 @@ def test_categoriser_honours_amount_conditions():
         },
     ]
     categoriser = Categoriser(rules)
-    assert (
-        categoriser.categorise({"merchant_normalised": "New World", "amount": "12.00"})
-        == "Groceries"
-    )
-    assert (
-        categoriser.categorise({"merchant_normalised": "New World", "amount": "5.00"})
-        == "Snacks"
-    )
+    category1, _ = categoriser.categorise({"merchant_normalised": "New World", "amount": "12.00"})
+    assert category1 == "Groceries"
+    category2, _ = categoriser.categorise({"merchant_normalised": "New World", "amount": "5.00"})
+    assert category2 == "Snacks"
 
 
 def test_categoriser_supports_exact_amounts_and_or_conditions():
@@ -68,18 +66,12 @@ def test_categoriser_supports_exact_amounts_and_or_conditions():
         },
     ]
     categoriser = Categoriser(rules)
-    assert (
-        categoriser.categorise({"merchant_normalised": "Coffee", "amount": "4.50"})
-        == "Work Coffee"
-    )
-    assert (
-        categoriser.categorise({"merchant_normalised": "Coffee", "amount": "0"})
-        == "Free Coffee"
-    )
-    assert (
-        categoriser.categorise({"merchant_normalised": "Coffee", "amount": "-4"})
-        == "Discount Coffee"
-    )
+    category1, _ = categoriser.categorise({"merchant_normalised": "Coffee", "amount": "4.50"})
+    assert category1 == "Work Coffee"
+    category2, _ = categoriser.categorise({"merchant_normalised": "Coffee", "amount": "0"})
+    assert category2 == "Free Coffee"
+    category3, _ = categoriser.categorise({"merchant_normalised": "Coffee", "amount": "-4"})
+    assert category3 == "Discount Coffee"
 
 
 def test_categoriser_ignores_amount_condition_when_unparseable():
@@ -91,7 +83,8 @@ def test_categoriser_ignores_amount_condition_when_unparseable():
         }
     ]
     categoriser = Categoriser(rules)
-    assert categoriser.categorise({"merchant_normalised": "Countdown", "amount": "1"}) == "Groceries"
+    category, _ = categoriser.categorise({"merchant_normalised": "Countdown", "amount": "1"})
+    assert category == "Groceries"
 
 
 def test_categoriser_falls_back_when_amount_missing():
@@ -104,10 +97,42 @@ def test_categoriser_falls_back_when_amount_missing():
         {"pattern": "fuel", "category": "Misc"},
     ]
     categoriser = Categoriser(rules)
-    assert categoriser.categorise({"merchant_normalised": "Fuel stop"}) == "Misc"
+    category, _ = categoriser.categorise({"merchant_normalised": "Fuel stop"})
+    assert category == "Misc"
 
 
 def test_detect_transfer_checks_multiple_fields():
     txn = {"description_raw": "Internal Transfer", "merchant_normalised": "BNZ"}
     assert Categoriser.detect_transfer(txn) is True
     assert Categoriser.detect_transfer({"description_raw": "Cafe"}) is False
+
+
+def test_categoriser_returns_category_type():
+    rules = [
+        {
+            "pattern": "countdown",
+            "category": "Groceries",
+            "category_type": "E",
+            "priority": 10,
+        },
+        {
+            "pattern": "sharesies",
+            "category": "Investments",
+            "category_type": "Iv",
+            "priority": 5,
+        },
+    ]
+    categoriser = Categoriser(rules)
+    
+    category, category_type = categoriser.categorise({"merchant_normalised": "Countdown"})
+    assert category == "Groceries"
+    assert category_type == "E"
+    
+    category, category_type = categoriser.categorise({"merchant_normalised": "Sharesies"})
+    assert category == "Investments"
+    assert category_type == "Iv"
+    
+    # Test uncategorised transaction
+    category, category_type = categoriser.categorise({"merchant_normalised": "Unknown Store"})
+    assert category == "Uncategorised"
+    assert category_type == ""

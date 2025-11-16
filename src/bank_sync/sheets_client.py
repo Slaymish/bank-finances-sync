@@ -20,6 +20,7 @@ TRANSACTION_HEADERS = [
     "description_raw",
     "merchant_normalised",
     "category",
+    "category_type",
     "is_transfer",
     "source",
     "imported_at",
@@ -69,7 +70,7 @@ class SheetsClient:
         return self._sheet_id_cache.get(sheet_name, 0)
 
     def fetch_transactions(self) -> List[SheetTransaction]:
-        range_name = f"{self._transactions_tab}!A2:K"
+        range_name = f"{self._transactions_tab}!A2:L"
         response = self._service.spreadsheets().values().get(
             spreadsheetId=self._spreadsheet_id, range=range_name
         ).execute()
@@ -84,7 +85,7 @@ class SheetsClient:
     def append_transactions(self, rows: Iterable[List[str]]) -> None:
         if not rows:
             return
-        range_name = f"{self._transactions_tab}!A:K"
+        range_name = f"{self._transactions_tab}!A:L"
         body = {"values": list(rows)}
         LOGGER.info("Appending %s new transactions", len(body["values"]))
         self._service.spreadsheets().values().append(
@@ -95,7 +96,7 @@ class SheetsClient:
         ).execute()
 
     def update_transaction(self, row_index: int, row: List[str]) -> None:
-        range_name = f"{self._transactions_tab}!A{row_index}:K{row_index}"
+        range_name = f"{self._transactions_tab}!A{row_index}:L{row_index}"
         LOGGER.info("Updating row %s", row_index)
         self._service.spreadsheets().values().update(
             spreadsheetId=self._spreadsheet_id,
@@ -111,7 +112,7 @@ class SheetsClient:
         
         data = [
             {
-                "range": f"{self._transactions_tab}!A{row_index}:K{row_index}",
+                "range": f"{self._transactions_tab}!A{row_index}:L{row_index}",
                 "values": [row]
             }
             for row_index, row in updates
@@ -153,13 +154,13 @@ class SheetsClient:
             raise
 
     def fetch_category_rules(self) -> List[Dict[str, str]]:
-        range_name = f"{self._category_tab}!A2:E"
+        range_name = f"{self._category_tab}!A2:F"
         response = self._service.spreadsheets().values().get(
             spreadsheetId=self._spreadsheet_id, range=range_name
         ).execute()
         rules = []
         for row in response.get("values", []):
-            padded = row + [""] * (5 - len(row))
+            padded = row + [""] * (6 - len(row))
             rules.append(
                 {
                     "pattern": padded[0],
@@ -167,6 +168,7 @@ class SheetsClient:
                     "category": padded[2] or "Uncategorised",
                     "priority": padded[3] or "1000",
                     "amount_condition": padded[4],
+                    "category_type": padded[5],
                 }
             )
         return rules
@@ -177,7 +179,7 @@ class SheetsClient:
             raise ValueError("No rows to upload")
         
         # Clear existing content (keep header row)
-        range_name = f"{self._category_tab}!A2:E"
+        range_name = f"{self._category_tab}!A2:F"
         self._service.spreadsheets().values().clear(
             spreadsheetId=self._spreadsheet_id,
             range=range_name
@@ -185,7 +187,7 @@ class SheetsClient:
         LOGGER.info("Cleared existing category rules")
         
         # Upload new data (including header if first row)
-        range_name = f"{self._category_tab}!A1:E"
+        range_name = f"{self._category_tab}!A1:F"
         body = {"values": rows}
         self._service.spreadsheets().values().update(
             spreadsheetId=self._spreadsheet_id,

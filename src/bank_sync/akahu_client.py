@@ -41,7 +41,7 @@ class AkahuTransaction:
             source=source,
         )
 
-    def to_row(self, *, category: str, is_transfer: bool, imported_at: datetime) -> List[str]:
+    def to_row(self, *, category: str, category_type: str, is_transfer: bool, imported_at: datetime) -> List[str]:
         """Return the row representation expected by Google Sheets."""
 
         return [
@@ -53,6 +53,7 @@ class AkahuTransaction:
             self.description_raw,
             self.merchant_normalised,
             category,
+            category_type,
             str(is_transfer).upper(),
             self.source,
             imported_at.isoformat(),
