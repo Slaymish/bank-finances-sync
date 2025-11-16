@@ -143,6 +143,7 @@ def run_sync(dry_run: bool = False, reset_state: bool = False) -> None:
     updates: List[tuple[int, List[str]]] = []
     seen_ids = set()
 
+    # Process fetched transactions from Akahu
     for transaction in fetched_transactions:
         if should_ignore(transaction, ignore_rules):
             LOGGER.info("Ignoring transaction %s (%s) due to ignore rules", transaction.id, transaction.description_raw)
@@ -167,6 +168,48 @@ def run_sync(dry_run: bool = False, reset_state: bool = False) -> None:
             continue
 
         sheet_txn = existing_map[transaction.id]
+        if _needs_update(sheet_txn.data, row):
+            updates.append((sheet_txn.row_index, row))
+
+    # Recategorize all existing transactions that weren't fetched from Akahu
+    # This ensures category/category_type updates are applied to all historical transactions
+    for sheet_txn in existing:
+        if sheet_txn.id in seen_ids or not sheet_txn.id:
+            continue  # Already processed or no ID
+        
+        # Mark as seen so it doesn't get deleted
+        seen_ids.add(sheet_txn.id)
+        
+        # Recategorize this existing transaction
+        transaction_dict = {
+            "id": sheet_txn.data.get("id", ""),
+            "date": sheet_txn.data.get("date", ""),
+            "account": sheet_txn.data.get("account", ""),
+            "amount": sheet_txn.data.get("amount", ""),
+            "balance": sheet_txn.data.get("balance", ""),
+            "description_raw": sheet_txn.data.get("description_raw", ""),
+            "merchant_normalised": sheet_txn.data.get("merchant_normalised", ""),
+            "source": sheet_txn.data.get("source", ""),
+        }
+        category, category_type = categoriser.categorise(transaction_dict)
+        is_transfer = categoriser.detect_transfer(transaction_dict)
+        
+        # Build the row with updated category/category_type
+        row = [
+            transaction_dict["id"],
+            transaction_dict["date"],
+            transaction_dict["account"],
+            transaction_dict["amount"],
+            transaction_dict["balance"],
+            transaction_dict["description_raw"],
+            transaction_dict["merchant_normalised"],
+            category,
+            category_type,
+            str(is_transfer).upper(),
+            transaction_dict["source"],
+            sheet_txn.data.get("imported_at", ""),  # Keep original import time
+        ]
+        
         if _needs_update(sheet_txn.data, row):
             updates.append((sheet_txn.row_index, row))
 
