@@ -245,6 +245,9 @@ def run_sync(dry_run: bool = False, reset_state: bool = False) -> None:
         # Update Dashboard with sync metadata
         if config.get("update_dashboard", True):
             dashboard_tab = config.get("dashboard_tab", "Dashboard")
+            # Get current time for last sync
+            sync_completion_time = datetime.now(timezone.utc)
+            
             # Find the most recent transaction date from all existing transactions
             all_transactions = sheets_client.fetch_transactions()
             most_recent_date = ""
@@ -255,7 +258,7 @@ def run_sync(dry_run: bool = False, reset_state: bool = False) -> None:
                     most_recent_date = max(dates)
             
             sheets_client.update_dashboard(
-                last_sync_time=imported_at.isoformat(),
+                last_sync_time=sync_completion_time.isoformat(),
                 most_recent_transaction_date=most_recent_date,
                 dashboard_tab=dashboard_tab
             )
